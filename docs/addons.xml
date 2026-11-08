@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addons>
+<addon id="script.kodi.castdiagnostic"
+       name="Kodi Cast Diagnostic"
+       version="0.1.0"
+       provider-name="GranKpac">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.python.script" library="default.py">
+    <provides>executable</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="es_ES">Diagnóstico local de la fuente de reproducción actual</summary>
+    <description lang="es_ES">Muestra el protocolo, host, extensión y nombres de cabeceras HTTP de la fuente que Kodi está reproduciendo. Oculta rutas completas, parámetros y valores de cabeceras.</description>
+    <platform>all</platform>
+    <license>MIT</license>
+  </extension>
+</addon>
+<addon id="repository.kodichromecastbridge"
+       name="Kodi Chromecast Bridge Repository"
+       version="0.1.0"
+       provider-name="GranKpac">
+  <extension point="xbmc.addon.repository" name="Kodi Chromecast Bridge Repository">
+    <dir>
+      <info compressed="false">https://grankpac.github.io/kodi-chromecast-bridge/addons.xml</info>
+      <checksum>https://grankpac.github.io/kodi-chromecast-bridge/addons.xml.md5</checksum>
+      <datadir zip="true">https://grankpac.github.io/kodi-chromecast-bridge/</datadir>
+    </dir>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="es_ES">Repositorio oficial del proyecto Kodi Chromecast Bridge</summary>
+    <description lang="es_ES">Distribución de complementos experimentales del proyecto Kodi Chromecast Bridge.</description>
+    <platform>all</platform>
+    <license>MIT</license>
+  </extension>
+</addon>
+</addons>
