@@ -1,88 +1,63 @@
 # Kodi Chromecast Bridge
 
-A small, experimental Kodi add-on project to send the currently playing video to a Google Cast device.
+Experimental project to send media selected or played in Kodi to a Google Cast receiver.
 
-## Status
+## Current status
 
-The desktop proof-of-concept has completed its initial device-discovery and Cast-control checks. Basic playback has been observed with public test media, but stable playback across formats and resolutions is not yet established. The next major milestone is to obtain the URL of media currently playing in Kodi and determine whether the Chromecast can access it.
+The desktop proof-of-concept established device discovery and basic Cast control. Subsequent Raspberry Pi experiments established Cast V2 communication from LibreELEC and observed playback with image and sound using an H.264 + AAC MP4. A fragmented-MP4 pipeline also started playback while FFmpeg was still generating the file.
 
-No Kodi installation or Raspberry Pi configuration has been changed during the desktop tests.
+The project is **not yet a complete Kodi-to-Chromecast integration**. The contextual prototype does not yet resolve an independent source or send media to Chromecast. End-of-playback cleanup, robust error handling, source resolution and full AllDebrid compatibility remain open work.
+
+See [the development log](docs/bitacora-desarrollo.md) and [test notes](tests/README.md) for observed results and limitations.
 
 ## Target environment
 
 - Kodi 21.x
 - LibreELEC 12.x
-- Raspberry Pi 5
-- Google Chromecast (the current test device is a 2nd-generation model)
+- Raspberry Pi 5 (ARM64)
+- Google Chromecast (2nd-generation device used in current tests)
 
-## Current test results
+## Confirmed observations
 
-### Confirmed
+- PyChromecast discovers Cast devices on the same LAN.
+- The experimental Cast V2 client establishes TLS, sends CONNECT, queries receiver status and launches Default Media Receiver (CC1AD845).
+- The receiver accepts LOAD commands in the tested cases.
+- An H.264 video stream copied without re-encoding and E-AC-3 audio converted to AAC stereo played with image and sound in an MP4 container.
+- A fragmented MP4 pipeline using FFmpeg and a local HTTP server began playback while the file was still being generated.
 
-- PyChromecast discovers the Chromecast on the same LAN.
-- The Python client connects to the device and can inspect its receiver state.
-- The Python client can send playback commands.
-- A public MP4 test URL has produced visible video on the TV in an earlier test. A later repeat was not stable, so this is evidence of basic playback capability, not a reliability result.
-- The Chromecast can request a media file from the Windows test computer over the LAN.
-- The standard Python http.server used in an initial local-file test returned 200 OK to a Range request. The project's servidor_range.py test server was then checked separately and returned 206 Partial Content for a byte-range request.
+These observations apply to specific test sources and devices. They do not certify general codec, container, HLS or AllDebrid compatibility. A receiver-reported PLAYING state is not proof of visible playback.
 
-### Partially tested / not conclusive
+## Experimental scripts
 
-- Some low-resolution public HLS test streams reached playback, and some were visually observed. This does not establish general HLS compatibility.
-- A 720p60 H.264/AAC local MP4 and a 720p60 HLS test did not achieve stable, visually confirmed playback.
-- PyChromecast reporting PLAYING is not by itself proof that video is visibly playing on the TV.
-- The cause of the 720p60 failures has not been isolated. Do not infer a codec limitation from these tests alone.
+The portable manual test scripts are in [scripts/experimental](scripts/experimental/README.md). They use runtime configuration (CAST_HOST, CAST_PORT, BRIDGE_DIR) and retrieve the Cast transportId dynamically for each session. They are not a stable background service.
 
-See tests/README.md for the test notes.
+Do not commit local URL files, current-item.json, credentials, cookies, tokens, media files, FFmpeg binaries or sensitive logs.
 
-## Important compatibility note
+## Compatibility note
 
-Kodi's xbmc.Player().getPlayingFile() returns the current playback URL or path, but that does not guarantee a Chromecast can fetch it. The URL may be local, temporary, protected by cookies or authorization headers, or point to an adaptive HLS/DASH stream. The Chromecast must be able to reach the resource and support its protocol, container, and codecs.
+Kodi's xbmc.Player().getPlayingFile() returns the current playback URL or path, but that does not guarantee Chromecast can fetch it. The URL may be local, temporary, protected by cookies or authorization headers, or point to an adaptive HLS/DASH stream. Chromecast must be able to reach the resource and support its protocol, container and codecs.
 
-AllDebrid and Palantir compatibility will be investigated after the Kodi playback URL has been captured and its accessibility to the Chromecast has been assessed. They are not assumed to work merely because Kodi can play a link.
-
-## Desktop test environment
-
-The initial tests were performed on a Windows computer and a Chromecast on the same local network, using a Python virtual environment and PyChromecast. The Raspberry Pi / LibreELEC installation has not yet been modified for this project.
-
-## First milestone: discover Cast devices
-
-Use a computer connected to the same network as the Chromecast.
-
-Requirements: Python 3.9 or newer.
-
-```bash
-python -m venv .venv
-```
-
-Activate the virtual environment, then install:
-
-```bash
-python -m pip install -r requirements.txt
-python scripts/discover_chromecasts.py
-```
-
-The script lists discovered Cast devices and exits. It does not start playback or interact with Kodi.
+AllDebrid and Palantir compatibility is not assumed merely because Kodi can play a link.
 
 ## Development principles
 
-- Test on a computer before installing anything on LibreELEC.
-- Do not stop local Kodi playback until the Cast receiver has accepted the media.
-- Never commit AllDebrid credentials, tokens, private stream URLs, cookies, or sensitive logs.
-- Keep the initial implementation independent of Palantir; add provider-specific handling only when the media URL behavior is understood.
-- Treat the receiver's reported playback state as diagnostic information, not as visual confirmation of playback.
+- Keep provider-specific handling separate until source URL behavior is understood.
+- Keep Kodi/HDMI playback independent from Chromecast playback.
+- Do not stop or change local Kodi playback as a side effect of a Cast session.
+- Never commit API credentials, passwords, tokens, private URLs, cookies or sensitive logs.
+- Verify playback visually and audibly on the TV; do not rely only on receiver status.
 
 ## Roadmap
 
-1. [x] Discover Chromecast devices from a desktop computer.
-2. [x] Confirm basic Cast connection and device selection.
-3. [x] Send playback commands and observe basic playback with public test media (stability and broad format support remain unverified).
-4. [ ] Capture the current playback URL from Kodi and inspect its type and access requirements.
-5. [ ] Determine whether the Chromecast can fetch the Kodi playback URL directly; identify when a local relay/remux/transcode is required.
-6. [ ] Implement the Kodi context-menu action and playback-state checks.
+1. [x] Discover Chromecast devices and establish Cast control.
+2. [x] Observe playback with selected public and local test media.
+3. [x] Observe fragmented MP4 playback while FFmpeg is generating the file.
+4. [ ] Verify natural playback end, disconnect handling and automatic cleanup.
+5. [ ] Resolve a source independently for Chromecast, without depending on the HDMI player.
+6. [ ] Implement a working Kodi context-menu action and Cast playback controls.
 7. [ ] Investigate protected/adaptive streams and AllDebrid compatibility.
 8. [ ] Package and test the add-on on LibreELEC.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See LICENSE.
