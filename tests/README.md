@@ -1,52 +1,43 @@
 # Tests
 
-These are manual integration tests performed from a Windows computer on the same LAN as a 2nd-generation Google Chromecast. The Raspberry Pi / LibreELEC installation has not been changed.
+Manual integration tests are documented by environment. Results from one environment must not be treated as results from another.
 
-## Device discovery and control
+## Historical Windows tests
 
-- scripts/discover_chromecasts.py discovered the Chromecast named Salón.
-- scripts/check_chromecast.py connected and read the receiver state.
-- The Python client successfully sent media playback commands.
+These tests were performed from a Windows computer on the same LAN as a 2nd-generation Google Chromecast.
 
-## Public media tests
+- Device discovery and receiver-state queries worked with PyChromecast.
+- Public MP4 H.264/AAC 360p was visibly reproduced in an earlier run; a later repeat stopped after a brief image.
+- Some low-resolution HLS tests reported PLAYING and were visually observed, but no general HLS compatibility was established.
+- A 720p60 HLS test and local 720p60 MP4 did not produce stable, visually confirmed playback.
+- A Range-capable test server returned HTTP 206 for the tested byte-range request. This did not resolve the 720p60 playback issue.
 
-- A public MP4 test URL (Big Buck Bunny, H.264/AAC, 360p) was visibly reproduced on the TV in an earlier test.
-- A later repeat showed an image briefly and then stopped. A revised test script was prepared to keep the PyChromecast connection open for 15 seconds after a PLAYING status, but that revised run has not yet been confirmed.
-- Several public low-resolution HLS variants were reported as PLAYING; some were visually observed during earlier tests. These results are not a comprehensive HLS compatibility certification.
-- A 720p60 HLS test and a local 720p60 MP4 did not produce stable, visually confirmed playback.
+A receiver-reported PLAYING state is not sufficient evidence of successful playback. Confirm the video on the TV and whether it remains visible for the expected duration.
 
-**Important:** PLAYING from PyChromecast is not sufficient evidence of successful playback. Confirm the video on the TV and whether it remains visible for the expected duration.
+## Raspberry Pi / LibreELEC tests (14 November 2026)
 
-## Local HTTP and byte-range test
+The later experiments used a Raspberry Pi 5, LibreELEC 12.2.1, Kodi 21.3 and a 2nd-generation Chromecast.
 
-- The initial local-file test used Python's standard http.server. A request with a Range: bytes=0-1023 header returned 200 OK, not 206 Partial Content.
-- The project test server servidor_range.py was checked with:
-
-```cmd
-curl.exe -H "Range: bytes=0-1023" -D - "http://192.168.1.187:8000/prueba_720p60.mp4" -o NUL
-```
-
-- The server returned 206 Partial Content, confirming that it handled this byte-range request correctly.
-- Repeating the 720p60 playback test after this change still did not establish stable playback. Therefore, the Range response issue was identified and corrected for the test server, but it was not proven to be the only cause of the playback failure.
+- The Cast V2 test scripts established TLS communication, sent CONNECT, queried receiver state, launched Default Media Receiver (CC1AD845) and sent LOAD.
+- An MP4 using H.264 video copied without re-encoding and AAC stereo audio was observed with image and sound.
+- HLS MPEG-TS and HLS fMP4 were rejected in the observed runs. The receiver requested the playlists but did not request their referenced media segments. This does not establish general HLS incompatibility.
+- A fragmented-MP4 pipeline using FFmpeg and a local HTTP server started playback with image and sound while FFmpeg was still generating the file. Natural end-of-playback and automatic cleanup remain unverified.
 
 ## Current conclusions
 
-1. Device discovery, connection, and command delivery work from Windows.
-2. Basic playback of public media has been observed, but repeatable stable playback is not yet established.
-3. The local Range-capable server responds with 206 Partial Content to the tested byte-range request.
-4. The cause of the 720p60 playback failures remains unknown.
-5. None of these tests yet proves that a URL obtained from Kodi, Palantir, or AllDebrid can be played directly by Chromecast.
+1. Basic device discovery, connection and command delivery have been observed.
+2. Playback has been observed in specific cases, but broad and repeatable format support is not established.
+3. The Raspberry Pi experiment validates the tested H.264 + AAC fragmented-MP4 path only.
+4. The cause of earlier 720p60 failures remains unknown.
+5. None of these tests proves every URL obtained from Kodi, Palantir or AllDebrid can be played directly by Chromecast.
 
-## Next test milestone
+## Security and reproducibility
 
-Capture the current playback URL using Kodi's xbmc.Player().getPlayingFile() and inspect whether it is a direct MP4, HLS, DASH, local path, or protected URL. Do not publish private URLs, tokens, cookies, authorization headers, or credentials in the repository or logs.
+- Do not commit private stream URLs, cookies, authorization headers, API keys, passwords, session tokens, local media files or logs containing them.
+- Set CAST_HOST at runtime; do not hard-code LAN addresses.
+- Cast transportId values are session-specific and must be obtained dynamically from RECEIVER_STATUS.
+- See [the experimental script guide](../scripts/experimental/README.md).
 
-## Original discovery test
+## Next milestone
 
-The first milestone is a manual integration test rather than an automated unit test:
-
-1. Install the requirements in a Python virtual environment on a computer on the same LAN as the Chromecast.
-2. Run python scripts/discover_chromecasts.py.
-3. Confirm that the expected Chromecast name, model, and local IP address are listed.
-
-No playback is started by this discovery test. If discovery fails, check that multicast/mDNS traffic is allowed and that the devices are not separated by guest Wi-Fi or VLAN isolation.
+Complete the lifecycle of the progressive-MP4 pipeline: natural end, receiver disconnect, FFmpeg termination, stale PID handling and temporary-file cleanup. Then integrate a source resolver independent of Kodi's HDMI player.
