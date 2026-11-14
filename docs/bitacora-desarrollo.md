@@ -113,7 +113,7 @@ Las pruebas fueron realizadas con listas VOD generadas previamente a partir de u
 | Reproducción HTTP de MP4 H.264 + AAC | Correcta, con sonido |
 | HLS MPEG-TS VOD | Rechazado en la prueba |
 | HLS fMP4 VOD | Rechazado en la prueba |
-| MP4 progresivo generado en directo | Pendiente |
+| MP4 fragmentado progresivo generado en directo | Probado en una reproducción real; cierre final aún pendiente |
 | Integración automática con Kodi | Pendiente |
 
 ## 8. Próxima línea de desarrollo: MP4 progresivo
@@ -158,3 +158,80 @@ En la Raspberry Pi se ha conseguido establecer comunicación con Chromecast medi
 Las pruebas HLS MPEG-TS y fMP4 no consiguieron iniciar la reproducción: el receptor solicitó las listas, pero no los segmentos. La causa exacta sigue pendiente de investigación.
 
 El siguiente objetivo es validar MP4 progresivo mediante FFmpeg y HTTP. La integración completa con Kodi, la automatización del envío y la compatibilidad general con enlaces de AllDebrid continúan pendientes.
+
+
+---
+
+## 11. Actualización de pruebas en Raspberry Pi — 14 de noviembre de 2026
+
+### 11.1. MP4 fragmentado en generación progresiva
+
+Se ha implementado una prueba experimental que conecta FFmpeg, un servidor HTTP local y el Default Media Receiver de Chromecast.
+
+Configuración de la prueba:
+
+- Fuente: elemento que Kodi estaba reproduciendo; la URL privada se mantiene fuera del repositorio.
+- Vídeo: H.264 copiado sin recodificación.
+- Audio: convertido a AAC estéreo.
+- Contenedor: MP4 fragmentado, usando `empty_moov`, fragmentación por fotograma clave y fragmentos de aproximadamente un segundo.
+- Transporte: servidor HTTP local con respuesta por bloques (`chunked`).
+- El servidor y el generador se ejecutaron como procesos separados.
+
+**Resultado observado:** Chromecast comenzó a reproducir el contenido con imagen y sonido mientras FFmpeg todavía estaba generando el archivo. La reproducción continuó después de que FFmpeg terminara de generar un archivo de aproximadamente 7,2 GB.
+
+La prueba se interrumpió cuando se cambió el contenido reproducido en Kodi. Por tanto, se ha demostrado el inicio y la continuidad durante la generación y después de ella, pero todavía no se ha verificado el final natural de la reproducción ni la limpieza automática de procesos y archivos.
+
+Este resultado valida la vía MP4 fragmentado progresivo para el contenido probado. No demuestra compatibilidad universal con todos los códecs, contenedores o enlaces de AllDebrid.
+
+### 11.2. Primera estructura del complemento contextual
+
+Se ha creado en el entorno de desarrollo local una estructura preliminar para el complemento independiente:
+
+`addon/addon.xml` y `addon/context.py`.
+
+- El XML declara el punto de extensión `kodi.context.item` y una acción denominada «Enviar al Chromecast».
+- El script obtiene el `ListItem` recibido por Kodi y lee título, tipo de medio y ruta.
+- La sintaxis Python se ha validado con `py_compile`.
+- El XML se ha validado con `xml.etree.ElementTree`.
+
+**Estado:** prototipo local sin instalar. Todavía no se ha probado desde la interfaz de Kodi y no debe considerarse una integración funcional.
+
+Se ha inspeccionado la declaración XML de Palantir 3 para confirmar el mecanismo de menú contextual de Kodi. No se ha modificado ni reutilizado código interno de Palantir.
+
+### 11.3. Requisito arquitectónico nuevo: reproducción independiente
+
+Durante una prueba doméstica se cambió el contenido de Kodi mientras el Chromecast estaba reproduciendo. Esto puso de manifiesto que la implementación actual obtiene la URL desde el elemento que Kodi está reproduciendo y, por tanto, no proporciona todavía dos sesiones de reproducción independientes.
+
+Nuevo requisito funcional:
+
+- Kodi/HDMI debe poder reproducir un contenido.
+- Chromecast debe poder reproducir simultáneamente otro contenido.
+- Cambiar o detener la reproducción HDMI no debe interrumpir la sesión Chromecast.
+
+La arquitectura actual todavía no cumple este requisito. El generador lee la URL de `current-item.json`; la futura integración deberá resolver y mantener una fuente propia para Chromecast, independiente del reproductor HDMI.
+
+### 11.4. Estado actualizado y próximos pasos
+
+| Área | Estado al 14-11-2026 |
+|---|---|
+| Comunicación Cast y envío de LOAD | Probados |
+| MP4 H.264 + AAC con reproducción HTTP | Probado con imagen y sonido |
+| MP4 fragmentado progresivo durante generación FFmpeg | Probado con contenido real |
+| Continuidad después de finalizar FFmpeg | Observada |
+| Fin natural de reproducción y limpieza automática | Pendiente |
+| Acción contextual del complemento | XML y script preliminares validados; no instalado |
+| Lectura de selección desde el menú contextual | Pendiente de prueba real en Kodi |
+| Fuente independiente para Chromecast | Pendiente |
+| Autorización/API de AllDebrid | Pendiente |
+| OAuth e integración de Trakt | Pendiente |
+| Gestión de errores, desconexiones y sesiones simultáneas | Pendiente |
+
+Próxima secuencia de trabajo:
+
+1. Cerrar y probar el ciclo de vida del flujo progresivo: fin natural, desconexión, limpieza y reinicio.
+2. Probar el prototipo contextual en Kodi sin iniciar la reproducción HDMI.
+3. Diseñar la obtención independiente de la fuente para Chromecast.
+4. Integrar AllDebrid y, posteriormente, Trakt.
+5. Añadir interfaz, icono, ajustes y empaquetado.
+
+No se han incorporado al repositorio archivos multimedia, URLs privadas, tokens, credenciales ni registros sensibles.
