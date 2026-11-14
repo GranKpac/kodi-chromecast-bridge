@@ -20,7 +20,7 @@ El objetivo es que Kodi actúe como interfaz de selección y control, mientras q
 - Python disponible en LibreELEC.
 - FFmpeg precompilado para Linux ARM64, instalado dentro del directorio del proyecto.
 
-La Raspberry Pi utilizada en estas pruebas tiene la dirección local `192.168.1.159`. La dirección del Chromecast y otros datos de la red se omiten deliberadamente de esta documentación.
+La Raspberry Pi utilizada en estas pruebas tiene la dirección local `[IP local omitida]`. La dirección del Chromecast y otros datos de la red se omiten deliberadamente de esta documentación.
 
 ## 3. Comunicación con Chromecast
 
@@ -235,3 +235,14 @@ Próxima secuencia de trabajo:
 5. Añadir interfaz, icono, ajustes y empaquetado.
 
 No se han incorporado al repositorio archivos multimedia, URLs privadas, tokens, credenciales ni registros sensibles.
+
+
+## 12. Portabilidad de scripts Cast — 14 de noviembre de 2026
+
+Se revisaron los scripts experimentales extraídos de la Raspberry Pi antes de publicarlos. Se eliminaron direcciones IP privadas y transportId antiguos fijados en el código. La configuración pasa a variables de entorno: CAST_HOST, CAST_PORT, BRIDGE_DIR y CAST_TIMEOUT.
+
+La comunicación Cast V2 se centralizó en scripts/experimental/cast_protocol.py. Los scripts que envían LOAD inician Default Media Receiver y obtienen el transportId dinámicamente de RECEIVER_STATUS en cada sesión. Las URLs de origen se leen de archivos locales no versionados o de CAST_MEDIA_URL; los generadores FFmpeg evitan mostrar la URL privada en mensajes de error.
+
+La sintaxis Python y las funciones de framing protobuf se comprobaron localmente. Estas comprobaciones no sustituyen una prueba real contra Chromecast. No se incorpora una segunda copia del complemento de diagnóstico: el prototipo contextual extraído todavía no envía contenido y el repositorio ya dispone de script.kodi.castdiagnostic.
+
+Queda pendiente ejecutar la versión portable en la Raspberry Pi, probar la reproducción MP4 fragmentada, cerrar el ciclo de limpieza y desarrollar el resolver independiente de la reproducción HDMI.
